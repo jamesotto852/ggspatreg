@@ -1,0 +1,168 @@
+---
+title: "Report 2 - Visualizing Kriging Variance"
+author: "James Otto"
+date: "6/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE,
+                      message = FALSE,
+                      warning = FALSE,
+                      results = "hide")
+```
+
+Again, we begin by simulating from a Gaussian process:
+```{r simulating}
+library("tidyverse"); theme_set(theme_bw())
+library("patchwork")
+
+set.seed(1)
+
+dom <- expand.grid(1:100, 1:100) %>% 
+  tibble() %>% 
+  rename(x = Var1, y = Var2) %>% 
+  slice_sample(n = 200)
+
+data <- geoR::grf(grid = dom, cov.model = "exp", cov.pars = c(5, 30), nugget = 1)$data %>%
+  {tibble(z = .)}
+
+df <- bind_cols(dom, data)
+```
+
+Below is a visualization of the simulated data:
+```{r visualizing_simulated_data}
+ggplot(df, aes(x, y, color = z, size = z)) +
+  geom_point() +
+  scale_color_viridis_c() +
+  guides(color = guide_legend(), size = guide_legend())
+```
+
+
+Loading the functions for extending ggplot2:
+```{r loading_functions}
+source(here::here("ggplot_work/Spatial_Modeling/R/geom-krige.R"))
+source(here::here("ggplot_work/Spatial_Modeling/R/stat-krige.R"))
+source(here::here("ggplot_work/Spatial_Modeling/R/geom-krige-contour.R"))
+source(here::here("ggplot_work/Spatial_Modeling/R/stat-krige-contour.R"))
+```
+
+Below, we have plotted the resulting kriging surface in heatmap form:
+```{r pred_plot}
+p_krige_heatmap <- ggplot(df, aes(x, y, z = z)) +
+  geom_krige(inits = c(6, 40), model = "exp") +
+  geom_point() +
+  scale_fill_viridis_c() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) 
+
+p_krige_heatmap
+```
+
+And below, we have plotted a heatmap of the kriging variance. 
+Unsurprisingly, we see that it is minimized at the locations corresponding to the observed values.
+Notice, the variance is available in the aesthetic mapping via the `after_stat` function (or `..var..`).
+```{r var_plot_1}
+p_var_heatmap <- ggplot(df) +
+  geom_krige(aes(x, y, z = z, fill = after_stat(var)), inits = c(6, 40), model = "exp", nx = 200, ny = 200) +
+  geom_point(aes(x, y)) +
+  scale_fill_viridis_c() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE)
+
+p_var_heatmap
+```
+
+Looking at these two plots side-by-side, we can get a sort of picture of the relationship between the kriging predictions and variance.
+However, this is difficult -- there must be a better way to plot the kriging predictions alongside their variance.
+
+```{r heatmaps, fig.width = 12}
+p_krige_heatmap | p_var_heatmap
+```
+
+***
+
+Interestingly, we had to change the resolution above for the kriging variance plot.
+When we approximate the surface with a $100 \times 100$ grid, it "syncs up" with the grid the data was simulated from.
+This results in some of the pixels being assigned a variance of 0, ruining the scale of the plot as shown below:
+```{r var_plot_2}
+ggplot(df) +
+  geom_krige(aes(x, y, z = z, fill = after_stat(var)), inits = c(6, 40), model = "exp") +
+  scale_fill_viridis_c() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE)
+```
+
+***
+
+We can create similar plots with filled contours.
+While these are better (the variance plot better indicates regions of precision) they still seem to be suboptimal.
+```{r contours, fig.width = 12}
+p_contours <- ggplot(df, aes(x, y, z = z)) +
+  geom_krige_contour_filled(inits = c(6, 40), model = "exp", nx = 50, ny = 50) +
+  scale_fill_viridis_d() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE)
+
+p_contours_var <- ggplot(df, aes(x, y, z = z)) +
+  geom_krige_contour_filled(inits = c(6, 40), model = "exp", nx = 50, ny = 50, var = TRUE) +
+  scale_fill_viridis_d() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE)
+
+(p_contours + ggtitle("Kriging Contours")) |
+(p_contours_var + ggtitle("Variance Contours"))
+```
+
+We can also combine the use of contours and filled contours:
+```{r contours_2}
+ggplot(df, aes(x, y, z = z)) +
+  geom_krige_contour_filled(inits = c(6, 40), model = "exp", nx = 50, ny = 50) +
+  geom_krige_contour(inits = c(6, 40), model = "exp", nx = 50, ny = 50, var = TRUE, bins = 4) +
+  scale_fill_viridis_d() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE)
+```
+
+We are interested in plots similar to above with labeled contours -- this is something to look into.
+
+Note that this in these examples, we have to specify `var = TRUE` as an argument for the geom.
+While I do not like the inconsitency between `geom_krige` and `geom_krige_contour` this seems to be necessary.
+It is simple enough to provide the computed kriging variance for each pixel in `stat_krige` and allow for its use in the aesthetic mapping.
+However, it is not so easy for the contours.
+The data is transformed considerably in the process of evaluating `stat_krige_contour`, in order to create contours for the variance ggplot has to "know" before getting to the `compute_group` stage.
+
+It may be good to allow for a "helper" argument, `var = TRUE`, in `geom_krige` for consistency.
+
+***
+
+Below, we have associated the alpha level of each pixel with its kriging variance:
+```{r heatmap_alpha}
+ggplot(df, aes(x, y, z = z)) +
+  geom_krige(aes(alpha = after_stat(var)), inits = c(6, 40), model = "exp", nx = 200, ny = 200) +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) +
+  scale_fill_viridis_c() +
+  scale_alpha_continuous(range = c(.9, 0)) + # Have to flip scale
+  guides(alpha = "none") +
+  theme(panel.grid = element_blank()) # Have to hide gridlines or they "peak out"
+```
+
+
+***
+
+Below, we have added a "cloudy effect" to indicate regions with lower levels of precision.
+(We are unable to adjust alpha according to variance for filled contour plots).
+```{r cloudy}
+p_var_cloudy <- ggplot(df, aes(x, y, z = z)) +
+  geom_krige(aes(alpha = after_stat(var)), inits = c(6, 40), model = "exp", nx = 250, ny = 250, fill = "white") +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) +
+  scale_alpha_continuous(range = c(.3, 1))
+
+library("grid")
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(1, 1, widths = unit(1 , "npc")))) 
+print(p_contours + 
+        theme_void() + 
+        theme(legend.position = "none"), vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(p_var_cloudy +
+        theme_void() +
+        theme(legend.position = "none"), vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+```
+
+Note, ggplot does not like having multiple fill scales in a single plot.
+The above workaround is odd, and is more a proof of concept.
