@@ -1,8 +1,5 @@
 # Pulling ideas from code for density2d and function stats/geoms
 
-# Could allow for optional argument with geoR variogram class object
-
-
 stat_krige <- function(mapping = NULL, data = NULL, geom = "krige",
                        position = "identity", na.rm = FALSE, show.legend = NA, 
                        inherit.aes = TRUE, ...,
@@ -10,7 +7,7 @@ stat_krige <- function(mapping = NULL, data = NULL, geom = "krige",
                        ny = 100,
                        xlim = NULL, 
                        ylim = NULL,
-                       formula = NULL,
+                       formula = z ~ 1,
                        model = NULL,
                        inits = NULL) {
   layer(
@@ -34,7 +31,7 @@ stat_krige <- function(mapping = NULL, data = NULL, geom = "krige",
 StatKrige <- ggproto("StatKrige", Stat,
                      compute_group = function(data, scales, 
                                               nx = 100, ny = 100, xlim = NULL, ylim = NULL, 
-                                              formula = NULL, model = NULL, inits = NULL) {
+                                              formula = z ~ 1, model = NULL, inits = NULL) {
                        
   # Creating grid for kriging
   rangex <- xlim %||% scales$x$dimension()
@@ -82,9 +79,6 @@ krigedf <- function(data, formula, model, inits, grid) {
   # Allow for no specification of cov.model? Choosing "best" as measured by some IC?
   #   cov.model <- model %||% best
   # Is there an easy way to generate reasonable initial values? MOM?
-  
-  formula <- formula %||% (z ~ 1)
-  
   
   vgm <- gstat::variogram(formula, locations = ~x+y, data = data)
   vgm_fit <- gstat::fit.variogram(vgm, model = gstat::vgm(model = model, psill = inits[1], range = inits[2], nugget = inits[3]))

@@ -9,7 +9,7 @@ stat_krige_contour <- function(mapping = NULL, data = NULL,
                          xlim = NULL,
                          ylim = NULL,
                          inits = NULL,
-                         formula = NULL,
+                         formula = z ~ 1,
                          model = NULL,
                          var = FALSE,
                          na.rm = FALSE,
@@ -52,7 +52,7 @@ stat_krige_contour_filled <- function(mapping = NULL, data = NULL,
                                       xlim = NULL,
                                       ylim = NULL,
                                       inits = NULL,
-                                      formula = NULL,
+                                      formula = z ~ 1,
                                       model = NULL,
                                       var = FALSE,
                                       na.rm = FALSE,
@@ -92,7 +92,7 @@ StatKrigeContour <- ggproto("StatKrigeContour", Stat,
   compute_group = function(data, scales, bins = NULL, binwidth = NULL, #z.range,
                           breaks = NULL, na.rm = FALSE,
                           nx = 100, ny = 100, xlim = NULL, ylim = NULL, # should these be here?
-                          formula = NULL, inits = NULL, model = NULL, var = FALSE) {
+                          formula = z ~ 1, inits = NULL, model = NULL, var = FALSE) {
   # Creating grid for kriging
   rangex <- xlim %||% scales$x$dimension()
   rangey <- ylim %||% scales$y$dimension()
