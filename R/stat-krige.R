@@ -1,8 +1,5 @@
 # Pulling ideas from code for density2d and function stats/geoms
 
-# Maybe good to allow for fill to be the SEs?
-# Maybe allow for contours instead of raster?
-#   Similar to geom_density2d and geom_density2d_filled
 # Could allow for optional argument with geoR variogram class object
 
 
@@ -58,7 +55,6 @@ StatKrige <- ggproto("StatKrige", Stat,
   # Found issue on github where ggplot maintainers discuss:
   # https://github.com/tidyverse/ggplot2/issues/3132
   # Recommend tidy prediction tools?
-  #   (Haven't found much for spatial prediction)
   
   
   krigedf(data, method, model, inits, grid)
@@ -83,9 +79,6 @@ krigedf <- function(data, method, model, inits, grid) {
   # Is there an easy way to generate reasonable initial values? MOM?
   
   # Only have been able to figure out how to krige via MLE with UK
-  
-  # Could allow for SK and KED
-  
   
   if (method == "OK") {
     # Allow users to specify weights parameter
