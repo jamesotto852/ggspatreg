@@ -9,7 +9,7 @@ stat_krige_contour <- function(mapping = NULL, data = NULL,
                          xlim = NULL,
                          ylim = NULL,
                          inits = NULL,
-                         method = "OK",
+                         formula = NULL,
                          model = NULL,
                          var = FALSE,
                          na.rm = FALSE,
@@ -31,7 +31,7 @@ stat_krige_contour <- function(mapping = NULL, data = NULL,
       ny = ny,
       xlim = xlim,
       ylim = ylim,
-      method = method,
+      formula = formula,
       inits = inits,
       model = model,
       var = var,
@@ -52,7 +52,7 @@ stat_krige_contour_filled <- function(mapping = NULL, data = NULL,
                                       xlim = NULL,
                                       ylim = NULL,
                                       inits = NULL,
-                                      method = "OK",
+                                      formula = NULL,
                                       model = NULL,
                                       var = FALSE,
                                       na.rm = FALSE,
@@ -75,7 +75,7 @@ stat_krige_contour_filled <- function(mapping = NULL, data = NULL,
       xlim = xlim,
       ylim = ylim,
       inits = inits,
-      method = method,
+      formula = formula,
       model = model,
       var = var,
       na.rm = na.rm,
@@ -92,17 +92,15 @@ StatKrigeContour <- ggproto("StatKrigeContour", Stat,
   compute_group = function(data, scales, bins = NULL, binwidth = NULL, #z.range,
                           breaks = NULL, na.rm = FALSE,
                           nx = 100, ny = 100, xlim = NULL, ylim = NULL, # should these be here?
-                          method = "OK", inits = NULL, model = NULL, var = FALSE) {
+                          formula = NULL, inits = NULL, model = NULL, var = FALSE) {
   # Creating grid for kriging
   rangex <- xlim %||% scales$x$dimension()
   rangey <- ylim %||% scales$y$dimension()
   
-  partition_x <- seq(rangex[1], rangex[2], length.out = nx)
-  partition_y <- seq(rangey[1], rangey[2], length.out = ny)
+  grid <- create_grid(rangex, rangey, nx, ny)
   
-  grid <- expand.grid(partition_x, partition_y) 
-  
-  prediction <- krigedf(data, method, model, inits, grid)
+  prediction <- krigedf(data, formula, model, inits, grid)
+
   
   if (var) {
     prediction <- prediction[,-3]
@@ -136,18 +134,15 @@ StatKrigeContourFilled <- ggproto("StatKrigeContourFilled", Stat,
   compute_group = function(data, scales, bins = NULL, binwidth = NULL, 
                            breaks = NULL, na.rm = FALSE,
                            nx = 100, ny = 100, xlim = NULL, ylim = NULL, # should these be here?
-                           method = "OK", inits = NULL, model = NULL, var = FALSE) {
+                           formula = NULL, inits = NULL, model = NULL, var = FALSE) {
     
   # Creating grid for kriging
   rangex <- xlim %||% scales$x$dimension()
   rangey <- ylim %||% scales$y$dimension()
   
-  partition_x <- seq(rangex[1], rangex[2], length.out = nx)
-  partition_y <- seq(rangey[1], rangey[2], length.out = ny)
+  grid <- create_grid(rangex, rangey, nx, ny)
   
-  grid <- expand.grid(partition_x, partition_y) 
-  
-  prediction <- krigedf(data, method, model, inits, grid)
+  prediction <- krigedf(data, formula, model, inits, grid)
   
   if (var) {
     prediction <- prediction[,-3]

@@ -10,7 +10,7 @@ stat_krige <- function(mapping = NULL, data = NULL, geom = "krige",
                        ny = 100,
                        xlim = NULL, 
                        ylim = NULL,
-                       method = "OK",
+                       formula = NULL,
                        model = NULL,
                        inits = NULL) {
   layer(
@@ -22,7 +22,7 @@ stat_krige <- function(mapping = NULL, data = NULL, geom = "krige",
       ny = ny,
       xlim = xlim,
       ylim = ylim,
-      method = method,
+      formula = formula,
       model = model,
       inits = inits,
       var = var,
@@ -34,16 +34,13 @@ stat_krige <- function(mapping = NULL, data = NULL, geom = "krige",
 StatKrige <- ggproto("StatKrige", Stat,
                      compute_group = function(data, scales, 
                                               nx = 100, ny = 100, xlim = NULL, ylim = NULL, 
-                                              method = "OK", model = NULL, inits = NULL) {
+                                              formula = NULL, model = NULL, inits = NULL) {
                        
   # Creating grid for kriging
   rangex <- xlim %||% scales$x$dimension()
   rangey <- ylim %||% scales$y$dimension()
   
-  partition_x <- seq(rangex[1], rangex[2], length.out = nx)
-  partition_y <- seq(rangey[1], rangey[2], length.out = ny)
-  
-  grid <- expand.grid(partition_x, partition_y) 
+  grid <- create_grid(rangex, rangey, nx, ny)
   
   
   # Factoring of the prediction mimicks that of stat_smooth
@@ -57,7 +54,7 @@ StatKrige <- ggproto("StatKrige", Stat,
   # Recommend tidy prediction tools?
   
   
-  krigedf(data, method, model, inits, grid)
+  krigedf(data, formula, model, inits, grid)
   },
   
   required_aes = c("x", "y", "z"),
@@ -71,48 +68,29 @@ StatKrige <- ggproto("StatKrige", Stat,
   # }
 )
 
+create_grid <- function(rangex, rangey, nx, ny) {
+  partition_x <- seq(rangex[1], rangex[2], length.out = nx)
+  partition_y <- seq(rangey[1], rangey[2], length.out = ny)
+  
+  grid <- data.frame(expand.grid(partition_x, partition_y))
+  names(grid) <- c("x", "y")
+  
+  grid
+}
 
-krigedf <- function(data, method, model, inits, grid) {
- 
+krigedf <- function(data, formula, model, inits, grid) {
   # Allow for no specification of cov.model? Choosing "best" as measured by some IC?
   #   cov.model <- model %||% best
   # Is there an easy way to generate reasonable initial values? MOM?
   
-  # Only have been able to figure out how to krige via MLE with UK
-  
-  if (method == "OK") {
-    # Allow users to specify weights parameter
-    #   cressie weights for robust estimation
-    #   (npairs is the default)
-    vgm <- geoR::variog(data = data$z, coords = cbind(data$x, data$y), weights = "npairs")
-    
-    vgm_fit <- geoR::variofit(vgm, ini.cov.pars = inits, cov.model = model)
-    
-    krige <- geoR::krige.conv(
-     data = data$z, coords = cbind(data$x, data$y), locations = grid, 
-     krige = geoR::krige.control(obj.model = vgm_fit)
-    )
-  }
+  formula <- formula %||% (z ~ 1)
   
   
-  if (method == "UK") {
-    vgm_fit <- geoR::likfit(data = data$z, coords = cbind(data$x, data$y), trend = "1st",
-                        ini.cov.pars = inits, cov.model = model)
-
-    krige <- geoR::krige.conv(
-      data = data$z, coords = cbind(data$x, data$y), locations = grid, 
-      krige = geoR::krige.control(
-        obj.model = vgm_fit,
-        # Could allow for specifying trend via formula (~) 
-        type.krige = "ok", trend.d = "1st", trend.l = "1st"
-      )
-    )
-  }
+  vgm <- gstat::variogram(formula, locations = ~x+y, data = data)
+  vgm_fit <- gstat::fit.variogram(vgm, model = gstat::vgm(model = model, psill = inits[1], range = inits[2], nugget = inits[3]))
+  prediction <- gstat::krige(formula = formula, data = data, locations = ~x+y, newdata = grid, model = vgm_fit)
   
   
-  
-  prediction <- data.frame(grid[,1], grid[,2], krige$predict, krige$krige.var)
   colnames(prediction) <- c("x", "y", "prediction", "var") 
-  
   prediction
 }
