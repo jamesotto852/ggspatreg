@@ -134,7 +134,7 @@ StatKrigeContourFilled <- ggproto("StatKrigeContourFilled", Stat,
   compute_group = function(data, scales, bins = NULL, binwidth = NULL, 
                            breaks = NULL, na.rm = FALSE,
                            nx = 100, ny = 100, xlim = NULL, ylim = NULL, # should these be here?
-                           formula = NULL, inits = NULL, model = NULL, var = FALSE) {
+                           formula = z ~ 1, inits = NULL, model = NULL, var = FALSE) {
     
   # Creating grid for kriging
   rangex <- xlim %||% scales$x$dimension()
