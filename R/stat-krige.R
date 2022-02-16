@@ -8,8 +8,8 @@ stat_krige <- function(mapping = NULL, data = NULL, geom = "krige",
                        xlim = NULL, 
                        ylim = NULL,
                        formula = z ~ 1,
-                       model = NULL,
-                       inits = NULL) {
+                       model = "Exp",
+                       inits = c(NA, NA, NA)) {
   layer(
     stat = StatKrige, data = data, mapping = mapping, geom = geom, 
     position = position, show.legend = show.legend, inherit.aes = inherit.aes,
@@ -31,7 +31,7 @@ stat_krige <- function(mapping = NULL, data = NULL, geom = "krige",
 StatKrige <- ggproto("StatKrige", Stat,
                      compute_group = function(data, scales, 
                                               nx = 100, ny = 100, xlim = NULL, ylim = NULL, 
-                                              formula = z ~ 1, model = NULL, inits = NULL) {
+                                              formula = z ~ 1, model = "Exp", inits = c(NA, NA, NA)) {
                        
   # Creating grid for kriging
   rangex <- xlim %||% scales$x$dimension()
@@ -55,7 +55,7 @@ StatKrige <- ggproto("StatKrige", Stat,
   },
   
   required_aes = c("x", "y", "z"),
-  default_aes = aes(color = NA, fill = after_stat(prediction))
+  default_aes = aes(color = NA, fill = after_stat(pred))
   # default_aes = {
   #   if (var) {
   #     aes(colour = NA, fill = after_stat(var))
@@ -81,10 +81,11 @@ krigedf <- function(data, formula, model, inits, grid) {
   # Is there an easy way to generate reasonable initial values? MOM?
   
   vgm <- gstat::variogram(formula, locations = ~x+y, data = data)
+  
   vgm_fit <- gstat::fit.variogram(vgm, model = gstat::vgm(model = model, psill = inits[1], range = inits[2], nugget = inits[3]))
   prediction <- gstat::krige(formula = formula, data = data, locations = ~x+y, newdata = grid, model = vgm_fit)
   
   
-  colnames(prediction) <- c("x", "y", "prediction", "var") 
+  colnames(prediction) <- c("x", "y", "pred", "var") 
   prediction
 }

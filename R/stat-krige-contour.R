@@ -8,9 +8,9 @@ stat_krige_contour <- function(mapping = NULL, data = NULL,
                          ny = 100,
                          xlim = NULL,
                          ylim = NULL,
-                         inits = NULL,
                          formula = z ~ 1,
-                         model = NULL,
+                         model = "Exp",
+                         inits = c(NA, NA, NA),
                          var = FALSE,
                          na.rm = FALSE,
                          show.legend = NA,
@@ -51,9 +51,9 @@ stat_krige_contour_filled <- function(mapping = NULL, data = NULL,
                                       ny = 100,
                                       xlim = NULL,
                                       ylim = NULL,
-                                      inits = NULL,
                                       formula = z ~ 1,
-                                      model = NULL,
+                                      model = "Exp",
+                                      inits = c(NA, NA, NA),
                                       var = FALSE,
                                       na.rm = FALSE,
                                       show.legend = NA,
@@ -87,12 +87,12 @@ stat_krige_contour_filled <- function(mapping = NULL, data = NULL,
 
 StatKrigeContour <- ggproto("StatKrigeContour", Stat,
   required_aes = c("x", "y", "z"),
-  default_aes = aes(order = after_stat(level)),
+  default_aes = aes(color = after_stat(pred), order = after_stat(pred)),
   
-  compute_group = function(data, scales, bins = NULL, binwidth = NULL, #z.range,
+  compute_group = function(data, scales, bins = NULL, binwidth = NULL, 
                           breaks = NULL, na.rm = FALSE,
-                          nx = 100, ny = 100, xlim = NULL, ylim = NULL, # should these be here?
-                          formula = z ~ 1, inits = NULL, model = NULL, var = FALSE) {
+                          nx = 100, ny = 100, xlim = NULL, ylim = NULL, 
+                          formula = z ~ 1, inits = c(NA, NA, NA), model = "Exp", var = FALSE) {
   # Creating grid for kriging
   rangex <- xlim %||% scales$x$dimension()
   rangey <- ylim %||% scales$y$dimension()
@@ -117,9 +117,18 @@ StatKrigeContour <- ggproto("StatKrigeContour", Stat,
   
   isolines <- ggplot2:::xyz_to_isolines(prediction, breaks)
   path_df <- ggplot2:::iso_to_path(isolines, data$group[1])
+  
+  # Weird fix, need unique names for isobands.
+  # ggplot2 code never does anything like this -- it doesn't need to?
+  isoline_names <- unique(names(isolines))
+  
+  isoline_names <- scales::number(as.numeric(isoline_names), big.mark="")
    
-  path_df$level <- as.numeric(path_df$level)
-  path_df$nlevel <- scales::rescale_max(path_df$level)
+  # Should pred be conts or discrete?
+  # Definitely don't want interval names from ggplot2:::pretty_isoband_levels()
+  path_df$level <- scales::number(as.numeric(path_df$level), big.mark="")
+  path_df$pred <- ordered(path_df$level, levels = isoline_names)
+  path_df$level <- NULL
    
   path_df
   }
@@ -129,12 +138,12 @@ StatKrigeContour <- ggproto("StatKrigeContour", Stat,
 StatKrigeContourFilled <- ggproto("StatKrigeContourFilled", Stat,
                              
   required_aes = c("x", "y", "z"),
-  default_aes = aes(order = after_stat(level), fill = after_stat(level)),
+  default_aes = aes(order = after_stat(pred), fill = after_stat(pred)),
   
   compute_group = function(data, scales, bins = NULL, binwidth = NULL, 
                            breaks = NULL, na.rm = FALSE,
-                           nx = 100, ny = 100, xlim = NULL, ylim = NULL, # should these be here?
-                           formula = z ~ 1, inits = NULL, model = NULL, var = FALSE) {
+                           nx = 100, ny = 100, xlim = NULL, ylim = NULL, 
+                           formula = z ~ 1, inits = c(NA, NA, NA), model = "Exp", var = FALSE) {
     
   # Creating grid for kriging
   rangex <- xlim %||% scales$x$dimension()
@@ -164,12 +173,8 @@ StatKrigeContourFilled <- ggproto("StatKrigeContourFilled", Stat,
   # ggplot2 code never does anything like this -- it doesn't need to?
   isoband_names <- unique(names(isobands))
   
-  # path_df$level <- ordered(path_df$level, levels = names(isobands))
-  path_df$level <- ordered(path_df$level, levels = isoband_names)
-  path_df$level_low <- breaks[as.numeric(path_df$level)]
-  path_df$level_high <- breaks[as.numeric(path_df$level) + 1]
-  path_df$level_mid <- 0.5*(path_df$level_low + path_df$level_high)
-  path_df$nlevel <- scales::rescale_max(path_df$level_high)
+  path_df$pred <- ordered(path_df$level, levels = isoband_names)
+  path_df$level <- NULL
    
   path_df
   }

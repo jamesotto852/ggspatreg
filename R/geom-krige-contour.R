@@ -43,6 +43,16 @@ geom_krige_contour_filled <- function(mapping = NULL, data = NULL,
 }
 
 
-GeomKrigeContour <- ggproto("GeomKrigeContour", GeomContour)
+GeomKrigeContour <- ggproto("GeomKrigeContour", GeomPath,
+  default_aes = aes(
+    size = 1,
+    colour = "#000000",
+    linetype = 1,
+    alpha = NA
+  )
+)
 
-GeomKrigeContourFilled <- ggproto("GeomKrigeContourFilled", GeomContourFilled)
+GeomKrigeContourFilled <- ggproto("GeomKrigeContourFilled", GeomPolygon)
+
+
+
