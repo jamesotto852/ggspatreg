@@ -1,0 +1,285 @@
+---
+title: "Visualization Examples (gstat backend)"
+author: "James Otto"
+date: "6/13/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE,
+                      message = FALSE,
+                      warning = FALSE,
+                      results = "hide")
+```
+
+## Simulated Examples
+### Constant Mean (Ordinary Kriging)
+
+First, we simulate data from a GRF with mean 0 and an exponential covariance structure with parameters $\sigma^2 = 5$ and $\phi = 30$.
+We simulate observations on a sample of size 600 from the set $D = \{1, \ldots, 100\} \times \{1, \ldots, 100\} \subset \mathbb{R}^2$.
+```{r simulating_OK}
+library("tidyverse"); theme_set(theme_bw())
+library("patchwork")
+
+set.seed(2)
+
+grid <- expand.grid(1:100, 1:100) %>% 
+  tibble() %>% 
+  rename(x = Var1, y = Var2)
+
+dom <- slice_sample(grid, n = 600)
+
+data <- geoR::grf(grid = dom, cov.model = "exp", cov.pars = c(5, 30), nugget = 1)$data %>%
+  {tibble(z = .)}
+
+df <- bind_cols(dom, data)
+```
+
+Below, we have visualized the simulated data and plotted the empirical variogram.
+```{r visualizing_sim_OK}
+ggplot(df, aes(x, y, color = z, size = z)) +
+  geom_point() +
+  scale_color_viridis_c() +
+  guides(color = guide_legend(), size = guide_legend())
+
+vgm <- gstat::variogram(z ~ 1, locations = ~x+y, data = df)
+plot(vgm)
+```
+
+We can estimate parameters of the variogram and perform ordinary kriging to interpolate between the original data.
+Note, we have to provide initial values for the parameters to be estimated as well as specify the exponential covariance model.
+```{r manual_kriging}
+vgm_fit <- gstat::fit.variogram(vgm, model = gstat::vgm(1, "Exp", 5, 30))
+vgm_fit <- gstat::fit.variogram(vgm, model = gstat::vgm(NA, "Exp", NA, NA))
+vgm_fit <- gstat::fit.variogram(vgm, model = gstat::vgm("Exp"))
+
+kriged <- gstat::krige(formula = z ~ 1, data = df, locations = ~x+y, newdata = grid, model = vgm_fit)
+names(kriged) <- c("x", "y", "prediction", "var")
+
+ggplot(df, aes(x, y, size = z)) +
+  geom_raster(data = kriged, aes(x, y, fill = prediction), inherit.aes = FALSE) +
+  geom_point() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) +
+  scale_fill_viridis_c() +
+  guides(size = guide_legend(reverse = TRUE))
+```
+
+***
+
+Now, we load in the functions which extend `ggplot2`:
+```{r loading_functions}
+list.files(here::here("R"), full.names = TRUE) |> walk(source)
+```
+
+Using these functions, we can create the same visualizations much easier.
+Below, see that the kriging is handled by `geom_krige` -- we only need supply the model specification and initial values for the parameters.
+Recall, these can be determined by visualizing the empirical variogram as before.
+```{r geom_krige_OK_1}
+ggplot(df, aes(x, y)) +
+  geom_krige(aes(z = z)) +
+  geom_point(aes(fill = z), shape = 21, size = 1.25) +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) +
+  scale_fill_viridis_c() +
+  guides(size = guide_legend(reverse = TRUE))
+```
+
+We can adjust the resolution of the kriging as shown below:
+```{r geom_krige_OK_2, fig.height = 10}
+p_low <- ggplot(df, aes(x, y, z = z)) +
+  geom_krige(nx = 50, ny = 50) +
+  scale_fill_viridis_c() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) 
+
+p_high <- ggplot(df, aes(x, y, z = z)) +
+  geom_krige(nx = 200, ny = 200) +
+  scale_fill_viridis_c() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE)
+
+p_low / p_high
+```
+
+We can also visualize the kriging output via contours with `geom_krige_contour` and `geom_krige_contour_filled` (which function similarly to `geom_contour` and `geom_contour_filled`):
+
+```{r geom_krige_contour_OK_1, fig.width = 10}
+p_contour <- ggplot(df, aes(x, y, z = z)) +
+  geom_krige_contour() +
+  scale_color_viridis_d() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE)
+
+p_contour_filled <- ggplot(df, aes(x, y, z = z)) +
+  geom_krige_contour_filled() +
+  scale_fill_viridis_d() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE)
+
+p_contour | p_contour_filled
+```
+
+We have also allowed for control of the resolution of the kriging here:
+```{r geom_krige_contour_OK_2, fig.width = 10}
+p_contour_lower <- ggplot(df, aes(x, y, z = z)) +
+  geom_krige_contour(nx = 30, ny = 30, bins = 5) +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE)
+
+p_contour_filled_lower <- ggplot(df, aes(x, y, z = z)) +
+  geom_krige_contour_filled(nx = 30, ny = 30, bins = 5) +
+  scale_fill_viridis_d() +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE)
+
+p_contour_lower | p_contour_filled_lower
+```
+
+
+### Non-Constant Mean (Universal Kriging)
+
+The extensions also allow for the mean of the GRF to depend on the coordinates.
+Below, we simulate from such a process using the same set $D$ as before.
+However, this time we are instead simulating from a process with Gaussian covariance and different covariance parameters.
+```{r simulating_UK}
+set.seed(1)
+data <- geoR::grf(grid = dom, cov.model = "exponential", cov.pars = c(10, 20), nugget = .5)$data |>
+  (\(z) tibble(z = z))()
+
+df <- bind_cols(dom, data) |> 
+  mutate(z = z + 3/20 * x - 1/20 * y)
+```
+
+Below, we can see the data is spatially corellated in addition to the obvious linear trend:
+```{r visualizing_sim_UK}
+ggplot(df, aes(x, y, fill = z)) +
+  geom_point(shape = 21, size = 5, stroke = 1) +
+  scale_fill_viridis_c()
+```
+
+In order to account for nonconstant mean, we specify the `formula` argument and estimate with universal kriging!
+
+```{r geom_krige_UK_1}
+ggplot(df, aes(x, y)) +
+  geom_krige(aes(z = z), formula = z ~ x + y) +
+  geom_point(aes(fill = z), shape = 21, size = 5, stroke = 1) +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) +
+  scale_fill_viridis_c()
+```
+
+Below, we perform ordinary kriging and ignore the spatial structure of the mean.
+See that the resulting interpolation does not fit the data as well, missing out on local variation.
+```{r geom_krige_OK_incorrect}
+ggplot(df, aes(x, y)) +
+  geom_krige(aes(z = z)) +
+  geom_point(aes(fill = z), shape = 21, size = 5, stroke = 1) +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) +
+  scale_fill_viridis_c()
+```
+
+***
+
+Below, we show each of the different methods of visualizing universal kriging:
+```{r geom_krige_UK_2, fig.height = 15}
+p_heatmap_UK <- ggplot(df, aes(x, y)) +
+  geom_krige(aes(z = z), formula = z ~ x + y) +
+  geom_point(aes(fill = z), shape = 21, size = 5, stroke = 1) +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) +
+  scale_fill_viridis_c()
+
+p_contour_UK <- ggplot(df, aes(x, y)) +
+  geom_krige_contour(aes(z = z), formula = z ~ x + y, bins = 5) +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) +
+  scale_fill_viridis_c() 
+
+p_contour_filled_UK <- ggplot(df, aes(x, y)) +
+  geom_krige_contour_filled(aes(z = z), formula = z ~ x + y, bins = 5) +
+  coord_cartesian(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) 
+
+p_heatmap_UK /
+p_contour_UK /
+p_contour_filled_UK
+```
+
+
+### Latitude Longitude Data and ggmap
+
+These extensions work well with the `ggmap` function.
+Below, we simulate data in the Waco area:
+
+```{r simulating_Waco}
+set.seed(3)
+
+df <- tibble(
+  lon = runif(250, -97.3, -97),
+  lat = runif(250, 31.4, 31.7),
+  z = geoR::grf(grid = cbind(lon, lat), cov.model = "exp", cov.pars = c(3, .1), nugget = 1)$data
+) 
+```
+
+Below, we set up ggmap and visualize our sample points:
+```{r ggmap_setup}
+library("ggmap")
+
+theme_update(
+  axis.title = element_blank(),
+  axis.text = element_blank(),
+  axis.ticks = element_blank() 
+)
+
+waco_map <- get_map(location = c(-97.3, 31.4, -97, 31.7), color = "bw")
+
+ggmap(waco_map) +
+  geom_point(data = df, aes(lon, lat, color = z, size = z)) +
+  guides(color = guide_legend(), size = guide_legend()) +
+  scale_color_viridis_c()
+```
+
+***
+
+It is simple to include kriging layers on top of ggmap raster images, we need only adjust `alpha`:
+```{r ggmap_krige_1, fig.height = 10, fig.width = 10}
+p_heatmap_dots <- ggmap(waco_map) +
+  geom_krige(data = df, aes(lon, lat, z = z), alpha = .4, inits = c(3, .1, 1), model = "Exp") +
+  geom_point(data = df, aes(lon, lat, size = z)) +
+  scale_fill_viridis_c()
+
+p_filled_contours_dots <- ggmap(waco_map) +
+  geom_krige_contour_filled(data = df, aes(lon, lat, z = z), alpha = .4, bins = 7, 
+                            inits = c(3, .1, 1), model = "Exp") +
+  geom_point(data = df, aes(lon, lat, size = z)) +
+  scale_fill_viridis_d()
+
+p_heatmap_dots /
+p_filled_contours_dots
+```
+
+***
+
+And now, without the plotted observations:
+
+```{r ggmap_krige_2, fig.height = 15, fig.width = 10}
+p_heatmap <- ggmap(waco_map) +
+  geom_krige(data = df, aes(lon, lat, z = z), alpha = .4, inits = c(3, .1, 1), model = "Exp") +
+  scale_fill_viridis_c()
+
+p_filled_contours <- ggmap(waco_map) +
+  geom_krige_contour_filled(data = df, aes(lon, lat, z = z), alpha = .4, bins = 7, 
+                            inits = c(3, .1, 1), model = "Exp") +
+  scale_fill_viridis_d()
+
+p_contours <- ggmap(waco_map) +
+  geom_krige_contour(data = df, aes(lon, lat, z = z), alpha = .4, bins = 7, 
+                     inits = c(3, .1, 1), model = "Exp")
+
+p_heatmap /
+p_filled_contours /
+p_contours
+```
+
+
+***
+<!-- Include real world example, probably weather-based -->
+<!-- We could provide similar geoms for estimating the mean of Poisson processes. -->
+
+
+
+
+
+
+
+
