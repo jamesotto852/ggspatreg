@@ -4,6 +4,10 @@
 # ggspatreg
 
 <!-- badges: start -->
+
+[![R-CMD-check](https://github.com/jamesotto852/ggspatreg/workflows/R-CMD-check/badge.svg)](https://github.com/jamesotto852/ggspatreg/actions)
+[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version-ago/ggspatreg)](https://cran.r-project.org/package=ggspatreg)
+[![CRAN_Download_Badge](http://cranlogs.r-pkg.org/badges/ggspatreg)](https://cran.r-project.org/package=ggspatreg)
 <!-- badges: end -->
 
 **ggspatreg** extends
