@@ -129,7 +129,7 @@ df <- tibble(
 ) 
 ```
 
-Below, we set up **ggmap** and visualize our sample points:
+Below, we set up [**ggmap**](https://github.com/dkahle/ggmap) and visualize our sample points:
 ```{r ggmap_setup, message = FALSE, results = FALSE}
 library("ggmap")
 
