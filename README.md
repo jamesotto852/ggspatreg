@@ -7,13 +7,15 @@
 <!-- badges: end -->
 
 **ggspatreg** extends **ggplot2**, allowing for simple visualization of
-spatial regression models.
+spatial regression models. Included are functions `geom_krige()`,
+`geom_krige_contour()`, and `geom_krige_contour_lines()` for plotting
+interpolation of spatial data.
 
 ## Installation
 
-**ggspatreg** is being actively developed, and is likely to undergo
-large changes in the future. It is not available on CRAN, but you can
-install the development version:
+**ggspatreg** is being actively developed and is likely to undergo large
+changes in the future. It is not available on CRAN, but you can install
+the development version:
 
 ``` r
 if (!requireNamespace("remotes")) install.packages("remotes")
@@ -98,7 +100,7 @@ dependence and the specified linear relationship.
 ggplot(df, aes(x, y)) +
   geom_krige(aes(z = z), formula = z ~ x + y) +
   geom_point(aes(fill = z), shape = 21, size = 3) +
-  coord_fixed(xlim = c(1, 100), ylim = c(1, 100), expand = FALSE) +
+  coord_fixed(xlim = c(0, 100), ylim = c(0, 100), expand = FALSE) +
   scale_fill_viridis_c()
 ```
 
