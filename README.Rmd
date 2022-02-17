@@ -9,7 +9,6 @@ knitr::opts_chunk$set(
   # cache = TRUE,
   collapse = TRUE,
   comment = "#>",
-  dpi = 300,
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
@@ -133,7 +132,7 @@ df <- tibble(
 ```
 
 Below, we set up [**ggmap**](https://github.com/dkahle/ggmap) and visualize our sample points:
-```{r ggmap_setup, message = FALSE, results = FALSE}
+```{r ggmap_setup, message = FALSE, results = FALSE, dpi = 300}
 library("ggmap")
 
 theme_update(
@@ -151,7 +150,7 @@ ggmap(waco_map) +
 ```
 
 It is simple to include kriging layers on top of ggmap raster images, we need only adjust `alpha`:
-```{r ggmap_krige_1, results = FALSE, warning = FALSE}
+```{r ggmap_krige_1, results = FALSE, warning = FALSE, dpi = 300}
 ggmap(waco_map) +
   geom_krige(data = df, aes(lon, lat, z = z), alpha = .4) +
   geom_point(data = df, aes(lon, lat, fill = z), shape = 21, size = 3) +
