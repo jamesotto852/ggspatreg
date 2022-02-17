@@ -6,16 +6,17 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-**ggspatreg** extends **ggplot2**, allowing for simple visualization of
-spatial regression models. Included are functions `geom_krige()`,
-`geom_krige_contour()`, and `geom_krige_contour_lines()` for plotting
-interpolation of spatial data.
+**ggspatreg** extends
+[**ggplot2**](https://github.com/tidyverse/ggplot2), allowing for simple
+visualization of spatial regression models. Included are functions
+`geom_krige()`, `geom_krige_contour()`, and `geom_krige_contour_lines()`
+for plotting interpolation of spatial data.
 
 ## Installation
 
 **ggspatreg** is being actively developed and is likely to undergo large
 changes in the future. It is not available on CRAN, but you can install
-the development version:
+the development version from [GitHub](https://github.com/):
 
 ``` r
 if (!requireNamespace("remotes")) install.packages("remotes")
@@ -135,12 +136,6 @@ df <- tibble(
   lat = runif(250, 31.4, 31.7),
   z = geoR::grf(grid = cbind(lon, lat), cov.model = "exp", cov.pars = c(3, .1), nugget = 1)$data
 ) 
-#> grf: simulation on a set of locations provided by the user
-#> grf: process with  1  covariance structure(s)
-#> grf: nugget effect is: tausq= 1 
-#> grf: covariance model 1 is: exponential(sigmasq=3, phi=0.1)
-#> grf: decomposition algorithm used is:  cholesky 
-#> grf: End of simulation procedure. Number of realizations: 1
 ```
 
 Below, we set up **ggmap** and visualize our sample points:

@@ -9,6 +9,7 @@ knitr::opts_chunk$set(
   # cache = TRUE,
   collapse = TRUE,
   comment = "#>",
+  dpi = 300,
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
@@ -19,7 +20,7 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
-**ggspatreg** extends **ggplot2**, allowing for simple visualization of spatial regression models.
+**ggspatreg** extends [**ggplot2**](https://github.com/tidyverse/ggplot2), allowing for simple visualization of spatial regression models.
 Included are functions `geom_krige()`, `geom_krige_contour()`, and `geom_krige_contour_lines()` 
 for plotting interpolation of spatial data.
 
@@ -27,7 +28,7 @@ for plotting interpolation of spatial data.
 ## Installation
 
 **ggspatreg** is being actively developed and is likely to undergo large changes in the future.
-It is not available on CRAN, but you can install the development version:
+It is not available on CRAN, but you can install the development version from [GitHub](https://github.com/):
 
 ``` r
 if (!requireNamespace("remotes")) install.packages("remotes")
@@ -118,7 +119,7 @@ ggplot(df, aes(x, y, z = z)) +
 **ggspatreg** works well with latitude longitude data.
 Below, we simulate spatial data for coordinates in Waco, TX.
 
-```{r simulating_Waco}
+```{r simulating_Waco, results = FALSE}
 set.seed(1)
 
 df <- tibble(
