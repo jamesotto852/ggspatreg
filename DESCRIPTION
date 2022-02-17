@@ -1,0 +1,26 @@
+Package: ggspatreg
+Title: Visualization of Spatial Regression Methods in 'ggplot2'
+Version: 0.0.0.9000
+Authors@R: 
+    c(person(given = "James",
+           family = "Otto",
+           role = c("aut", "cre"),
+           email = "jamesotto852@gmail.com",
+           comment = c(ORCID = "0000-0002-0665-2515")),
+      person(given = "David",
+           family = "Kahle",
+           role = c("aut"),
+           email = "david@kahle.io",
+           comment = c(ORCID = "0000-0002-9999-1558")))
+Description: What the package does (one paragraph).
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
+Depends:
+    ggplot2
+Imports:
+    isoband,
+    gstat,
+    stats,
+    scales
