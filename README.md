@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# ggspatreg
+# ggspatreg <img src="man/figures/logo.png"  align="right"  width="120" style="padding-left:10px;background-color:white;" />
 
 <!-- badges: start -->
 
@@ -177,6 +177,7 @@ ggmap(waco_map) +
 <img src="man/figures/README-ggmap_krige_1-1.png" width="100%" />
 
 ``` r
+
 ggmap(waco_map) +
   geom_krige_contour(data = df, aes(lon, lat, z = z), alpha = .4, bins = 7) +
   scale_fill_viridis_d()
@@ -185,6 +186,7 @@ ggmap(waco_map) +
 <img src="man/figures/README-ggmap_krige_1-2.png" width="100%" />
 
 ``` r
+
 ggmap(waco_map) +
   geom_krige_contour_lines(data = df, aes(lon, lat, z = z), bins = 7) +
   scale_fill_viridis_d()
